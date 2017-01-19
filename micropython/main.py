@@ -1,30 +1,31 @@
 #!/bin/python
 
 import network
-import socket
 from time import sleep
 import machine
 import dht
 import ujson
+import http_client2
+
 
 SSID = ""
 PASSWORD = ""
 DHT11PIN = ""
+URL = ""
 
 
 def http_get(url):
-    _, _, host, path = url.split('/', 3)
-    addr = socket.getaddrinfo(host, 80)[0][-1]
-    s = socket.socket()
-    s.connect(addr)
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' %
-                 (path, host), 'utf8'))
-    while True:
-        data = s.recv(100)
-        if data:
-            print(str(data, 'utf8'), end='')
-        else:
-            break
+    r = http_client2.get(url)
+    r.raise_for_status()
+    print(r.status_code)
+    print(r.text)  # r.content for raw bytes
+
+
+def send_data(url, humidity, temperature):
+    r = http_client2.post(url,
+                          json={'humidity': str(humidity),
+                                'temperature': str(temperature)})
+    print(r.json())
 
 
 def go_sleep():
@@ -50,25 +51,26 @@ def back_from_sleep():
     return False
 
 
-def do_connect(ssid=SSID, password=PASSWORD):
+def do_connect(ssid, password):
+    print('Global variables SSID: "{}", PASSWORD: "{}"'.format(SSID, PASSWORD))
     sta_if = network.WLAN(network.STA_IF)
     if not sta_if.isconnected():
-        print('connecting to network...')
+        print('Connecting to network "{}"-({})...'.format(ssid, password))
         sta_if.active(True)
         sta_if.connect(ssid, password)
         sleep(1)
-        for i in range(5):
+        for i in range(8):
             if sta_if.isconnected():
-                print('connected')
+                print('Connected')
                 break
-            sleep(1)
+            sleep(2)
         if sta_if.isconnected():
             return True
         else:
             print('Could not connect to wifi network')
             return False
     else:
-        print('network config:', sta_if.ifconfig())
+        print('Already connected. Network config:', sta_if.ifconfig())
         return True
 
 
@@ -79,26 +81,40 @@ def read_dht11(pin=2):
     print("Temperature: {}".format(t))
     h = d.humidity()
     print("Humidity: {}".format(h))
-    return (t, h)
+    return (h, t)
 
 
 def read_config(filename="config.json"):
     global SSID
     global PASSWORD
     global DHT11PIN
+    global URL
     f = open(filename, 'r')
-    config = ujson.loads(f.readall())
-
-# edit the data
+    content = f.readall()
+    config = ujson.loads(content)
+    print(content)
     SSID = config['ssid']
     PASSWORD = config['password']
     DHT11PIN = int(config['dht11pin'])
+    URL = config['url']
+
+
+def blink(times=1):
+    p2 = machine.Pin(2, machine.Pin.OUT)
+    p2.high()
+    for i in range(times):
+        sleep(0.2)
+        p2.low()
+        sleep(0.2)
+        p2.high()
 
 
 if __name__ == "__main__":
+    blink(4)
     read_config()
-    read_dht11(DHT11PIN)
-    if do_connect():
-        http_get('http://micropython.org/ks/test.html')
-
-    # go_sleep()
+    while True:
+        (humidity, temperature) = read_dht11(DHT11PIN)
+        if do_connect(SSID, PASSWORD):
+            send_data(URL, humidity, temperature)
+            blink(2)
+            sleep(60)
