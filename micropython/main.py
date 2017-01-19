@@ -1,6 +1,7 @@
 #!/bin/python
 
 import network
+import sys
 from time import sleep
 import machine
 import dht
@@ -113,8 +114,13 @@ if __name__ == "__main__":
     blink(4)
     read_config()
     while True:
-        (humidity, temperature) = read_dht11(DHT11PIN)
-        if do_connect(SSID, PASSWORD):
-            send_data(URL, humidity, temperature)
-            blink(2)
-            sleep(60)
+        try:
+            (humidity, temperature) = read_dht11(DHT11PIN)
+            if do_connect(SSID, PASSWORD):
+                send_data(URL, humidity, temperature)
+                blink(2)
+                sleep(60)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            blink(6)
+            sleep(10)
