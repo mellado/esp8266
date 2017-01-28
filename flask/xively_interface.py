@@ -10,8 +10,8 @@ import requests
 # extract feed_id and api_key from environment variables
 FEED_ID = "793200265"
 API_KEY = "cbamGge7wUmat5b9YlmHwOOAkKBdZjDxnYoHS1oVGhVJ92XJ"
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+#DEBUG = True
 
 # initialize api client
 api = xively.XivelyAPIClient(API_KEY)
@@ -33,7 +33,7 @@ def get_datastream(feed, channel, tag):
   except:
     if DEBUG:
       print("Creating new datastream")
-    datastream = feed.datastreams.create("load_avg", tags=tag)
+    datastream = feed.datastreams.create(channel, tags=tag)
     return datastream
 
 
@@ -49,12 +49,12 @@ def publish(channel, tag, value):
   if DEBUG:
     print("Updating Xively feed channel %s(%s) with value: %s" % (channel, tag, value))
 
-    datastream.current_value = value
-    datastream.at = datetime.datetime.utcnow()
-    try:
-      datastream.update()
-    except requests.HTTPError as e:
-      print("HTTPError({0}): {1}".format(e.errno, e.strerror))
+  datastream.current_value = value
+  datastream.at = datetime.datetime.utcnow()
+  try:
+    datastream.update()
+  except requests.HTTPError as e:
+    print("HTTPError({0}): {1}".format(e.errno, e.strerror))
 
 # main program entry point - runs continuously updating our datastream with the
 # current 1 minute load average

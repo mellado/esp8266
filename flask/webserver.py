@@ -1,7 +1,10 @@
+from datetime import datetime
+import json
 from flask import Flask
 from flask import request, jsonify
 from xively_interface import publish
 
+BEDROOM_PATH_LOG = "/home/osmc/esp8266/flask/bedroom.log"
 app = Flask(__name__)
 
 @app.route('/')
@@ -17,6 +20,14 @@ def save_data():
     print(content['temperature'])
     print(content['humidity'])
     publish("humidity", "dormitorio", content['humidity'])
+    publish("temperature", "dormitorio", content['temperature'])
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    f = open(BEDROOM_PATH_LOG, "a")
+    line = {'time': timestamp, 'temperature':content['temperature'],
+            'humidity':content['humidity']}
+    json.dump(line, f)
+    f.close()
+
     return jsonify(**result)
 
 if __name__ == '__main__':
