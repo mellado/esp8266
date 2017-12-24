@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 send_data(URL, humidity, temperature)
                 blink(2)
                 sleep(60)
-        except:
-            print("Unexpected error:", sys.exc_info()[0])
+        except Exception as exc:
+            sys.print_exception(exc)
             blink(6)
             sleep(10)
