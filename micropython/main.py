@@ -7,6 +7,7 @@ import machine
 import dht
 import ujson
 import http_client2
+from machine import WDT
 
 
 SSID = ""
@@ -14,6 +15,7 @@ PASSWORD = ""
 DHT11PIN = ""
 URL = ""
 
+WATCHDOG_TIMEOUT = 120000
 
 def http_get(url):
     r = http_client2.get(url)
@@ -113,7 +115,9 @@ def blink(times=1):
 if __name__ == "__main__":
     blink(4)
     read_config()
+    wdt = WDT(timeout=WATCHDOG_TIMEOUT) # initialize and start watchdog
     while True:
+        wdt.feed() # refresh watchdog
         try:
             (humidity, temperature) = read_dht11(DHT11PIN)
             if do_connect(SSID, PASSWORD):
