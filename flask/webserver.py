@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import json
-from flask import Flask
+from flask import Flask, render_template
 from flask import request, jsonify
 
 BEDROOM_PATH_LOG = "/tmp/bedroom.log"
@@ -12,27 +12,28 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    pass
+    return render_template('single_page.html')
 
 def get_near_future_datetime():
     result = datetime.now() + timedelta(minutes = 10)
     return result
 
-@app.route('/get_data')
-def send_data():
-    from_datetime = request.args.get('from_datetime')
-    to_datetime = request.args.get('to_datetime', default=get_near_future_datetime())
-    print("from %s, to %s", (from_datetime, to_datetime))
+def get_saved_data():
     raw = open(BEDROOM_PATH_LOG).read()
     raw = raw.replace('}',"},\n")
     raw = raw[:-2]
     raw = "[\n" + raw + "\n]"
-    # data = json.load(open(BEDROOM_PATH_LOG))
     data = json.loads(raw)
+    return data
+
+@app.route('/get_data')
+def send_data():
+    from_datetime = request.args.get('from_datetime')
+    to_datetime = request.args.get('to_datetime', default=get_near_future_datetime().strftime("%Y-%m-%d %H:%M:%S"))
+    data = get_saved_data()
     data = [i for i in data if i.get("time") >= from_datetime]
-    data = [i for i in data if i.get("time") <= to_datetime.strftime("%Y-%m-%d %H:%M:%S")]
-    raw = "%s - %s<br>%s - %s<br><pre>%s</pre>"% (from_datetime, to_datetime, data[0].get("time"), data[-1].get("time"), data)
-    return raw
+    data = [i for i in data if i.get("time") <= to_datetime]
+    return jsonify(results=data)
 
 @app.route('/save_data', methods=['POST'])
 def save_data():
